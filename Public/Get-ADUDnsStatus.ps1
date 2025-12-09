@@ -1,4 +1,4 @@
-function Get-DnsStatus {
+function Get-ADUDnsStatus {
     <#
     .SYNOPSIS
         Reports the DNS Scavenging (Janitor) status.
@@ -14,7 +14,7 @@ function Get-DnsStatus {
         Accepts Short Names (e.g., 'DC01') or FQDNs.
 
     .EXAMPLE
-        Get-DnsStatus -Exclude "AWSDC01"
+        Get-ADUDnsStatus -Exclude "AWSDC01"
         
         This will filter out "AWSDC01" AND "AWSDC01.mekorot.co.il".
     #>

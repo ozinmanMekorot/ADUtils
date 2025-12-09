@@ -1,4 +1,4 @@
-﻿function Get-AttributeEditor {
+﻿function Get-ADUAttributeEditor {
     <#
     .SYNOPSIS
         Opens a Read-Only Grid View window mimicking the ADUC Attribute Editor tab.
@@ -17,7 +17,7 @@
         If specified, the grid will hide empty attributes (those marked "<not set>") and only show attributes with values.
 
     .EXAMPLE
-        Get-AttributeEditor -Identity "jdoe"
+        Get-ADUAttributeEditor -Identity "jdoe"
         Opens a window showing all raw attributes for user jdoe.
     #>
     [CmdletBinding()]

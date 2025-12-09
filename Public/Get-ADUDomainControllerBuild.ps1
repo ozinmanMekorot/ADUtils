@@ -1,4 +1,4 @@
-﻿function Get-DomainControllerBuild {
+﻿function Get-ADUDomainControllerBuild {
     <#
     .SYNOPSIS
         Retrieves the full Windows Build version (including UBR) from Domain Controllers.
@@ -26,15 +26,15 @@
         The direction of the sort. Options: "Ascend" (default) or "Descend".
 
     .EXAMPLE
-        Get-DomainControllerBuild
+        Get-ADUDomainControllerBuild
         Returns build info for all DCs in the domain.
 
     .EXAMPLE
-        Get-DomainControllerBuild -SiteName "HQ-Site" -Exclude "DC05"
+        Get-ADUDomainControllerBuild -SiteName "HQ-Site" -Exclude "DC05"
         Returns build info for DCs in "HQ-Site", excluding DC05.
 
     .EXAMPLE
-        Get-DomainControllerBuild -ComputerName "DC01", "DC02"
+        Get-ADUDomainControllerBuild -ComputerName "DC01", "DC02"
         Returns build info only for the specific servers listed.
     #>
     [CmdletBinding(DefaultParameterSetName = 'QueryAD')]

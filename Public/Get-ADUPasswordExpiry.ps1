@@ -1,4 +1,4 @@
-﻿function Get-PasswordExpiry {
+﻿function Get-ADUPasswordExpiry {
     <#
     .SYNOPSIS
         Checks if an Active Directory user's password has exceeded the maximum age.
@@ -14,11 +14,11 @@
         The number of days before a password is considered expired. Default is 90.
         
     .EXAMPLE
-        Get-PasswordExpiry -UserName "jdoe"
+        Get-ADUPasswordExpiry -UserName "jdoe"
         Checks user "jdoe" against the default 90-day limit.
         
     .EXAMPLE
-        Get-PasswordExpiry -UserName "admin01" -MaxPasswordAge 30
+        Get-ADUPasswordExpiry -UserName "admin01" -MaxPasswordAge 30
         Checks user "admin01" against a stricter 30-day limit.
     #>
     

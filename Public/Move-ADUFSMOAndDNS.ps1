@@ -1,4 +1,4 @@
-function Move-FSMOAndDNS {
+function Move-ADUFSMOAndDNS {
     <#
     .SYNOPSIS
         Transfers FSMO roles and relocates the DNS Scavenging (Janitor) responsibility.
@@ -42,12 +42,12 @@ function Move-FSMOAndDNS {
         Target for the DNS Scavenging role.
 
     .EXAMPLE
-        Move-FSMOAndDNS -DestinationServer "DC02"
+        Move-ADUFSMOAndDNS -DestinationServer "DC02"
         
         Auto-detects current Janitor, disables it, moves all FSMO to DC02, and enables Janitor on DC02.
 
     .EXAMPLE
-        Move-FSMOAndDNS -PDCMaster "DC01" -RIDMaster "DC01" -InfrastructureMaster "DC02" -SchemaMaster "DC01" -DomainNamingMaster "DC01" -DNSJanitorTarget "DC03"
+        Move-ADUFSMOAndDNS -PDCMaster "DC01" -RIDMaster "DC01" -InfrastructureMaster "DC02" -SchemaMaster "DC01" -DomainNamingMaster "DC01" -DNSJanitorTarget "DC03"
         
         Moves roles to specific locations. DC03 becomes the new DNS Janitor.
     #>
