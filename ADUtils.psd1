@@ -69,9 +69,8 @@ RequiredModules = @('ActiveDirectory')
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-ADUAttributeEditor', 'Get-ADUDnsStatus', 
-               'Get-ADUDomainControllerBuild', 'Get-ADUPasswordExpiry', 
-               'Move-ADUFSMOAndDNS', 'New-ADUgMSA'
+FunctionsToExport = 'Get-ADUDnsStatus', 'Get-ADUDomainControllerBuild', 'Get-ADUObject', 
+               'Get-ADUPasswordExpiry', 'Move-ADUFSMOAndDNS', 'New-ADUgMSA'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
