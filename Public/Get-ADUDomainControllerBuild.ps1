@@ -6,36 +6,11 @@
     .DESCRIPTION
         This function queries Domain Controllers to retrieve OS Version and Update Build Revision (UBR).
         It supports querying by specific Active Directory Site, the entire domain, or a specific list of servers.
-        It uses parallel processing (Invoke-Command) for high performance.
+        
+        *Update*: Handles connection errors by listing them as "Error" and ensures DC names are consistently formatted (short names).
 
     .PARAMETER ComputerName
         A specific list of Domain Controller names to query.
-        Cannot be used with -SiteName or -Exclude.
-
-    .PARAMETER SiteName
-        The Active Directory Site name to target. If omitted, targets all DCs in the domain.
-    
-    .PARAMETER Exclude
-        A list of Domain Controller names (HostName or simple Name) to exclude from the report.
-        Only available when querying via AD (Site or All), not when using -ComputerName.
-
-    .PARAMETER SortBy
-        The property to sort by. Options: "DCName" or "FullBuild" (default).
-
-    .PARAMETER SortOrder
-        The direction of the sort. Options: "Ascend" (default) or "Descend".
-
-    .EXAMPLE
-        Get-ADUDomainControllerBuild
-        Returns build info for all DCs in the domain.
-
-    .EXAMPLE
-        Get-ADUDomainControllerBuild -SiteName "HQ-Site" -Exclude "DC05"
-        Returns build info for DCs in "HQ-Site", excluding DC05.
-
-    .EXAMPLE
-        Get-ADUDomainControllerBuild -ComputerName "DC01", "DC02"
-        Returns build info only for the specific servers listed.
     #>
     [CmdletBinding(DefaultParameterSetName = 'QueryAD')]
     param (
@@ -103,22 +78,20 @@
                 return
             }
 
+            # We use HostName (FQDN) for the connection to be safe, but we will clean up the display later
             $TargetList = $DCs.HostName
         }
 
         # --- EXECUTION: Parallel Processing ---
         Write-Verbose "Querying $($TargetList.Count) servers..."
 
+        # Use SilentlyContinue so we can handle the missing ones manually
         $Results = Invoke-Command -ComputerName $TargetList -ErrorAction SilentlyContinue -ScriptBlock {
             try {
-                # Get OS Version from CIM/WMI
                 $OS = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
-                
-                # Get UBR from Registry
                 $UBRKey = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction Stop
                 $UBR = $UBRKey.UBR
 
-                # Get IP Address (Primary IPv4)
                 $IP = (Get-CimInstance Win32_NetworkAdapterConfiguration | 
                       Where-Object { $_.IPEnabled -eq $true }).IPAddress | 
                       Where-Object { $_ -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$' } | 
@@ -131,19 +104,48 @@
                 }
             }
             catch {
-                Write-Warning "$($env:COMPUTERNAME): $($_.Exception.Message)"
+                # Internal script block error (Connection succeeded, but execution failed)
+                [PSCustomObject]@{
+                    DCName    = $env:COMPUTERNAME
+                    IPAddress = "Check Access"
+                    FullBuild = "Error"
+                }
             }
         }
 
+        # --- ERROR HANDLING: Detect Connection Failures ---
+        $RespondingHosts = $Results.PSComputerName
+        $FailedHosts = $TargetList | Where-Object { $RespondingHosts -notcontains $_ }
+
+        $ErrorRecords = foreach ($FailedDC in $FailedHosts) {
+            # FIX: Split the string on '.' and take the first part to ensure we only show Hostname, not FQDN
+            $ShortName = $FailedDC.Split('.')[0]
+
+            [PSCustomObject]@{
+                DCName    = $ShortName
+                IPAddress = "-"
+                FullBuild = "Error"
+            }
+        }
+
+        # Merge successful results with error records
+        $FinalOutput = $Results + $ErrorRecords
+
         # --- OUTPUT & SORTING ---
         $SortProperty = if ($SortBy -eq 'FullBuild') { 
-            { [version]$_.FullBuild } 
+            { 
+                if ($_.FullBuild -match '^\d') { 
+                    [version]$_.FullBuild 
+                } else { 
+                    [version]"0.0" 
+                }
+            } 
         } else { 
             $SortBy 
         }
 
-        $Results | Select-Object DCName, IPAddress, FullBuild | 
-                   Sort-Object -Property $SortProperty -Descending:($SortOrder -eq 'Descend') | 
-                   Format-Table -AutoSize
+        $FinalOutput | Select-Object DCName, IPAddress, FullBuild | 
+                       Sort-Object -Property $SortProperty -Descending:($SortOrder -eq 'Descend') | 
+                       Format-Table -AutoSize
     }
 }
