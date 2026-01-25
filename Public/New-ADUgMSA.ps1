@@ -179,8 +179,8 @@ function New-ADUgMSA {
 
 Write-Host "Checking RSAT-AD-PowerShell..." -ForegroundColor Cyan
 try {
-    `$Feature = Get-WindowsFeature RSAT-AD-PowerShell
-    if (-not `$Feature.Installed) {
+    $Feature = Get-WindowsFeature RSAT-AD-PowerShell -ErrorAction SilentlyContinue
+    if ($null -eq $Feature -or -not $Feature.Installed) {
         Add-WindowsFeature RSAT-AD-PowerShell
         Write-Host "RSAT Tools Installed." -ForegroundColor Green
     }
@@ -189,22 +189,48 @@ catch {
     Write-Warning "Could not install RSAT tools automatically. Ensure internet/SXS access."
 }
 
+# --- NO REBOOT LOGIC START ---
+Write-Host "Refreshing Computer Kerberos Tickets (Avoiding Reboot)..." -ForegroundColor Cyan
+# This purges the tickets for the Local System session (0x3e7)
+# This allows the server to 'see' its new gMSA permissions immediately.
+klist -li 0x3e7 purge | Out-Null
+
+Write-Host "Forcing Computer Policy Update..." -ForegroundColor Cyan
+gpupdate /target:computer /force | Out-Null
+# --- NO REBOOT LOGIC END ---
+
 Write-Host "Installing gMSA: $ServiceName" -ForegroundColor Cyan
 try {
+    # We clear the error variable to ensure a clean check
+    $Error.Clear()
     Install-ADServiceAccount -Identity "$ServiceName" -ErrorAction Stop
     Write-Host "Success: Account installed." -ForegroundColor Green
 }
 catch {
-    Write-Error "Failed to install gMSA. Error: `$_"
-    Write-Host "Troubleshooting:" -ForegroundColor Yellow
-    Write-Host "1. Have you rebooted this server since adding it to the group?"
-    Write-Host "2. Wait 15 minutes for AD replication to reach this server."
+    Write-Host "Failed to install gMSA. Attempting one-time dependency check..." -ForegroundColor Yellow
+    
+    # Check if the KDS Root Key is actually ready (common failure point)
+    $kdsKey = Get-KdsRootKey -ErrorAction SilentlyContinue
+    if (-not $kdsKey) {
+        Write-Error "CRITICAL: No KDS Root Key found in AD. gMSA cannot function."
+    } else {
+        Write-Error "Failed to install gMSA. Error: $_"
+    }
 }
 
 Write-Host "Testing gMSA Connectivity..." -ForegroundColor Cyan
-`$Test = Test-ADServiceAccount -Identity "$ServiceName"
-if (`$Test) { Write-Host "Test Passed: TRUE" -ForegroundColor Green }
-else { Write-Host "Test Failed: FALSE" -ForegroundColor Red }
+# Small pause to allow AD to settle after the install command
+Start-Sleep -Seconds 2 
+$Test = Test-ADServiceAccount -Identity "$ServiceName"
+
+if ($Test) { 
+    Write-Host "Test Passed: TRUE" -ForegroundColor Green 
+    Write-Host "The account is ready for use in Services, IIS, or Tasks." -ForegroundColor White
+}
+else { 
+    Write-Host "Test Failed: FALSE" -ForegroundColor Red
+    Write-Host "Ensure $( $ComputerNames -join ', ' ) is a member of the gMSA Access Group." -ForegroundColor Yellow
+}
 "@
 
                 Set-Content -Path $ScriptFile -Value $ScriptContent
